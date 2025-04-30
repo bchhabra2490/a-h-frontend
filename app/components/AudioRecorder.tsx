@@ -2,9 +2,11 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { io, Socket } from 'socket.io-client';
+import SoapNote from '../types';
 
 interface AudioRecorderProps {
-  onSoapNoteUpdate: (soapNote: string) => void;
+  onSoapNoteUpdate: (soapNote: SoapNote[]) => void;
+  selectedIndices: number[];
 }
 
 interface TranscriptEvent {
@@ -15,20 +17,22 @@ interface TranscriptEvent {
 
 interface SoapNoteEvent {
   text: string;
+  error?: string;
 }
 
 interface ErrorEvent {
   message: string;
 }
 
-export default function AudioRecorder({ onSoapNoteUpdate }: AudioRecorderProps) {
+export default function AudioRecorder({ onSoapNoteUpdate, selectedIndices }: AudioRecorderProps) {
   const [isRecording, setIsRecording] = useState(false);
-  const [transcript, setTranscript] = useState('');
+  const [transcripts, setTranscripts] = useState<TranscriptEvent[]>([]);
   const socketRef = useRef<Socket | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
+
 
   useEffect(() => {
     // Initialize socket connection
@@ -41,12 +45,16 @@ export default function AudioRecorder({ onSoapNoteUpdate }: AudioRecorderProps) 
 
     socket.on('transcript', ({ text, startInterval, endInterval }: TranscriptEvent) => {
       console.log('Received transcript:', { text, startInterval, endInterval });
-      setTranscript(prev => prev + (prev ? ' ' : '') + text);
+      setTranscripts(prev => [...prev, { text, startInterval, endInterval }]);
     });
 
-    socket.on('soap-notes', ({ text }: SoapNoteEvent) => {
+    socket.on('soap-notes', ({ text, error }: SoapNoteEvent) => {
       console.log('Received SOAP note:', text);
-      onSoapNoteUpdate(text);
+      if (error) {
+        console.error('Error in SOAP note:', error);
+      } else {
+        onSoapNoteUpdate(JSON.parse(text));
+      }
     });
 
     socket.on('error', ({ message }: ErrorEvent) => {
@@ -143,7 +151,22 @@ export default function AudioRecorder({ onSoapNoteUpdate }: AudioRecorderProps) 
         <div className="bg-gray-100 p-4 rounded-lg min-h-[200px]">
           <h3 className="text-lg font-semibold mb-2 text-gray-900">Live Transcript</h3>
           <div className="whitespace-pre-wrap bg-white p-4 rounded shadow text-gray-800 max-h-[600px] overflow-y-auto">
-            {transcript || 'No transcript available yet...'}
+            {transcripts.length > 0 ? (
+              transcripts.map((transcript, index) => (
+                <div 
+                  key={index}
+                  className={`p-2 rounded ${
+                    selectedIndices.includes(index) 
+                      ? 'bg-blue-100 border-l-4 border-blue-500' 
+                      : ''
+                  }`}
+                >
+                  <span>{transcript.text}</span>
+                </div>
+              ))
+            ) : (
+              'No transcript available yet...'
+            )}
           </div>
         </div>
       </div>
