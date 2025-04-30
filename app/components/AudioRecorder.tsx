@@ -142,7 +142,7 @@ export default function AudioRecorder({ onSoapNoteUpdate }: AudioRecorderProps) 
       <div className="w-full max-w-2xl">
         <div className="bg-gray-100 p-4 rounded-lg min-h-[200px]">
           <h3 className="text-lg font-semibold mb-2 text-gray-900">Live Transcript</h3>
-          <div className="whitespace-pre-wrap bg-white p-4 rounded shadow text-gray-800">
+          <div className="whitespace-pre-wrap bg-white p-4 rounded shadow text-gray-800 max-h-[600px] overflow-y-auto">
             {transcript || 'No transcript available yet...'}
           </div>
         </div>
